@@ -40,7 +40,7 @@ Files: `server.js`, `schema/` (queryType, resolvers, dataloaders), `service/` (a
 | FE features           | Auth, Task CRUD + sub-tasks, Search + pagination, Admin (read-only) |
 | Admin scope           | Read-only user directory (matches current BE)                       |
 | Worktree              | No — work in current checkout on branch `revamp-fullstack`          |
-| Deploy target         | Render (free tier): Web Service + Static Site + managed Postgres    |
+| Deploy target         | Render (free tier): Web Service + Static Site; **Neon** for Postgres |
 
 ## 4. Repo layout
 
@@ -84,13 +84,14 @@ No other change to the GraphQL API surface (only the `role` signup field is drop
 
 - Convert `database/tables.sql` into **knex migrations**: `user`, `task`, `map_parent_sub_task` (enums `user_role_enum`, `status_enum`; FKs; soft-delete columns).
 - **Seed:** one ADMIN user; credentials from env (`ADMIN_EMAIL`, `ADMIN_PASSWORD`), password bcrypt-hashed.
-- **knexfile:** add a `production` env using `connection: DATABASE_URL` + `ssl: { rejectUnauthorized: false }` (Render Postgres requires SSL). Env selected by `NODE_ENV`. Keep `development` as-is.
+- **knexfile:** add a `production` env using `connection: DATABASE_URL` + `ssl: { rejectUnauthorized: false }` (Neon requires SSL — `sslmode=require`). Env selected by `NODE_ENV`. Keep `development` as-is.
+- **Database host:** **Neon** (serverless Postgres, free tier) — external to Render. `DATABASE_URL` = Neon connection string, set manually as a Render env var (not auto-provisioned). Use Neon's pooled connection string for the serverless Web Service.
 - Migrations run on Render deploy (predeploy: `knex migrate:latest`).
 
 ### Storage estimate (free-tier sanity check)
 
 Per-row (with indexes): user ≈ 228 B, task ≈ 118 B, subtask link ≈ 70 B.
-100 users × 1000 tasks = 100k tasks ≈ **13–16 MB** total (incl. ~25% subtask links + ~15% overhead). Free-tier cap is 1 GB — ~60× headroom. Free Postgres expires after 30 days (accepted).
+100 users × 1000 tasks = 100k tasks ≈ **13–16 MB** total (incl. ~25% subtask links + ~15% overhead). Neon free-tier cap is 0.5 GB — ~30× headroom. Neon free tier does **not** expire (autosuspends when idle, wakes on connection); no 30-day limit.
 
 ## 8. Frontend (`/client`)
 
@@ -136,10 +137,10 @@ Stack: React + Vite + TypeScript + Tailwind CSS + shadcn/ui + Apollo Client + re
 
 ## 9. Deployment (Render, via `render.yaml`)
 
-- **PostgreSQL** (Render managed, free) → provides `DATABASE_URL`.
-- **Web Service** (`/server`): build `npm install`; predeploy `npx knex migrate:latest`; start `node server.js`. Env: `DATABASE_URL`, `JWT_SECRET_KEY`, `NODE_ENV=production`, `CLIENT_ORIGIN`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `PORT` (Render-provided).
+- **PostgreSQL** (**Neon**, free serverless) → provides `DATABASE_URL`. External to Render; created in the Neon console, connection string pasted into the Web Service env. Not defined in `render.yaml`.
+- **Web Service** (`/server`): build `npm install`; predeploy `npx knex migrate:latest`; start `node server.js`. Env: `DATABASE_URL` (Neon pooled string), `JWT_SECRET_KEY`, `NODE_ENV=production`, `CLIENT_ORIGIN`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `PORT` (Render-provided).
 - **Static Site** (`/client`): build `npm install && npm run build`; publish `client/dist`. Env: `VITE_GRAPHQL_URL` = deployed API URL. SPA rewrite rule → `index.html`.
-- `render.yaml` blueprint defines all three so deploy is reproducible.
+- `render.yaml` blueprint defines the two Render services (Web Service + Static Site); Neon is provisioned separately.
 
 ## 10. Verification
 
