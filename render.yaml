@@ -1,0 +1,52 @@
+# Render Blueprint — Task Manager (GraphQL API + React SPA)
+#
+# PostgreSQL is hosted on Neon (serverless, free tier) EXTERNALLY — it is NOT a
+# Render service and is intentionally not defined here. Create the database in
+# the Neon console, then paste its POOLED connection string into DATABASE_URL
+# on the api service below (sync: false → set in the Render dashboard).
+#
+# After the first deploy assigns URLs, fill the two cross-referenced vars in the
+# dashboard: CLIENT_ORIGIN (api) = the web service URL, and VITE_GRAPHQL_URL
+# (web) = the api service URL + "/graphql".
+
+services:
+  - type: web
+    name: task-manager-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    # Runs migrations + the idempotent admin seed on every deploy, before the
+    # new instance takes traffic. NODE_ENV=production makes knex pick the
+    # production connection (DATABASE_URL + SSL).
+    preDeployCommand: npm run migrate && npm run seed
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+  - type: web
+    name: task-manager-web
+    runtime: static
+    rootDir: client
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_GRAPHQL_URL
+        sync: false
+    routes:
+      # SPA fallback: every unmatched path serves index.html so client-side
+      # routing (/login, /board, /admin) works on direct navigation/refresh.
+      - type: rewrite
+        source: /*
+        destination: /index.html
