@@ -52,7 +52,7 @@ export const TaskCard = ({ task, onEdit, onDelete, onAddSubTask }: TaskCardProps
       {...attributes}
       {...listeners}
     >
-      <CardHeader className="flex-row items-center justify-between gap-2">
+      <CardHeader className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1">
           {hasSubTasks ? (
             <Button
