@@ -4,9 +4,9 @@
 
 **Goal:** Modernize the backend-only GraphQL task manager (fix security + deploy blockers), add a polished React frontend, deploy the whole thing on Render.
 
-**Architecture:** Monorepo — `/server` (existing GraphQL API, modernized, stays CommonJS JS) + `/client` (new Vite React TS SPA). API served by `@apollo/server` v5 on Express 5 over Render Postgres via Knex. FE talks to it with Apollo Client.
+**Architecture:** Monorepo — `/server` (existing GraphQL API, modernized, stays CommonJS JS) + `/client` (new Vite React TS SPA). API served by `@apollo/server` v5 on Express 5 over Neon Postgres via Knex. FE talks to it with Apollo Client.
 
-**Tech Stack:** Node + Express 5, `@apollo/server` v5, `graphql`, Knex + `pg`, `bcryptjs`, `jsonwebtoken` 9, `graphql-shield`, `dataloader`, `lodash`, `validator` (server); React 19 + Vite + TypeScript + Tailwind + shadcn/ui + Apollo Client + react-router + @dnd-kit (client); Render (web service + static site + managed Postgres).
+**Tech Stack:** Node + Express 5, `@apollo/server` v5, `graphql`, Knex + `pg`, `bcryptjs`, `jsonwebtoken` 9, `graphql-shield`, `dataloader`, `lodash`, `validator` (server); React 19 + Vite + TypeScript + Tailwind + shadcn/ui + Apollo Client + react-router + @dnd-kit (client); Render (web service + static site); Neon (serverless Postgres).
 
 ## Global Constraints
 
@@ -652,7 +652,7 @@ JWT_SECRET_KEY=
 PG_DB=
 PG_USER=
 PG_PASSWORD=
-# Production (Render injects DATABASE_URL)
+# Production (Neon pooled connection string, set as a Render env var)
 DATABASE_URL=
 # Frontend origin for CORS in production
 CLIENT_ORIGIN=
@@ -901,9 +901,8 @@ VITE_GRAPHQL_URL=http://localhost:4000/graphql
 - [ ] **Step 1: Create `render.yaml`**
 
 ```yaml
-databases:
-  - name: task-manager-db
-    plan: free
+# Postgres is hosted on Neon (external, not a Render service).
+# Paste the Neon pooled connection string into DATABASE_URL below (sync: false).
 
 services:
   - type: web
@@ -918,9 +917,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: task-manager-db
-          property: connectionString
+        sync: false
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: CLIENT_ORIGIN
@@ -945,7 +942,7 @@ services:
         destination: /index.html
 ```
 
-> `CLIENT_ORIGIN` (api) and `VITE_GRAPHQL_URL` (web) are cross-references filled in the Render dashboard after first deploy assigns URLs. `preDeployCommand` runs migrations + idempotent admin seed on every deploy.
+> `DATABASE_URL` is the Neon pooled connection string (from the Neon console), pasted as a `sync: false` var. `CLIENT_ORIGIN` (api) and `VITE_GRAPHQL_URL` (web) are cross-references filled in the Render dashboard after first deploy assigns URLs. `preDeployCommand` runs migrations + idempotent admin seed on every deploy.
 
 - [ ] **Step 2: Rewrite `README.md`** — project overview, local dev (server + client), env vars table, and Render deploy steps (create blueprint from `render.yaml`, set the three `sync:false` vars, wire the two cross-referenced URLs).
 
