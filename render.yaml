@@ -15,11 +15,12 @@ services:
     runtime: node
     plan: free
     rootDir: server
-    buildCommand: npm install
-    # Runs migrations + the idempotent admin seed on every deploy, before the
-    # new instance takes traffic. NODE_ENV=production makes knex pick the
-    # production connection (DATABASE_URL + SSL).
-    preDeployCommand: npm run migrate && npm run seed
+    # Migrations + the idempotent admin seed run in the build step. Render's
+    # dedicated preDeployCommand is not available on the free tier, and env
+    # vars (DATABASE_URL, ADMIN_*, NODE_ENV=production so knex picks the
+    # production SSL connection) are all present at build time. Idempotent, so
+    # re-running on every build is safe.
+    buildCommand: npm install && npm run migrate && npm run seed
     startCommand: npm run start
     envVars:
       - key: NODE_ENV
