@@ -53,3 +53,14 @@ export const DELETE_TASK = gql`
     }
   }
 `;
+
+export const RESTORE_USER = gql`
+  mutation RestoreUser($input: RestoreUserInput!) {
+    restoreUser(input: $input) {
+      id
+      name
+      email
+      isDeleted
+    }
+  }
+`;

@@ -9,11 +9,17 @@ dotEnv.config({ path: path.join(__dirname, "../../.env") });
 
 // __dirname-anchored so `knex migrate/seed` finds these no matter the CWD it's
 // invoked from (local `cd server`, Render's rootDir, or npx from elsewhere).
+// loadExtensions is pinned to .cjs: the package is "type": "module", so the
+// migration/seed files stay CommonJS (.cjs) and knex must not try to load .js.
 const migrations = {
   directory: path.join(__dirname, "../migrations"),
   tableName: "knex_migrations",
+  loadExtensions: [".cjs"],
 };
-const seeds = { directory: path.join(__dirname, "../seeds") };
+const seeds = {
+  directory: path.join(__dirname, "../seeds"),
+  loadExtensions: [".cjs"],
+};
 
 module.exports = {
   development: {

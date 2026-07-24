@@ -1,7 +1,8 @@
-const knex = require("knex");
-const knexfile = require("./knexfile");
+import knex from "knex";
+
+import knexfile from "./knexfile.cjs";
 
 const env =
   process.env.NODE_ENV === "production" ? "production" : "development";
 
-module.exports.db = knex(knexfile[env]);
+export const db = knex(knexfile[env]);

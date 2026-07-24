@@ -55,6 +55,7 @@ export interface AdminUser {
   id: number;
   name: string;
   email: string;
+  isDeleted: boolean | null;
   tasks: { id: number }[] | null;
 }
 
@@ -116,4 +117,20 @@ export interface DeleteTaskVars {
 
 export interface DeleteTaskData {
   deleteTask: { id: number };
+}
+
+// Admin-only: reverses a soft-deleted user. Matches the RESTORE_USER selection
+// set plus __typename so Apollo normalizes the change onto the User:<id> entity.
+export interface RestoreUserVars {
+  input: { id: number };
+}
+
+export interface RestoreUserData {
+  restoreUser: {
+    __typename: "User";
+    id: number;
+    name: string;
+    email: string;
+    isDeleted: boolean | null;
+  };
 }

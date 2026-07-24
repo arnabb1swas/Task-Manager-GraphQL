@@ -1,6 +1,6 @@
-const gql = require('graphql-tag');
+import gql from "graphql-tag";
 
-module.exports = gql`
+export default gql`
     extend type Query {
         users(filter: Filter!, cursor: String): UserFeed!
         user: User!
@@ -11,12 +11,14 @@ module.exports = gql`
         logIn(input: LoginInput!): UserToken!
         updateUser(input: UpdateUserInput!): User!
         deleteUser: Boolean!
+        restoreUser(input: RestoreUserInput!): User!
     }
 
     type User {
         id: Int!
         name: String!
         email: String!
+        isDeleted: Boolean
         tasks: [Task!]
     }
 
@@ -39,6 +41,10 @@ module.exports = gql`
     input LoginInput {
         email: String!
         password: String!
+    }
+
+    input RestoreUserInput {
+        id: Int!
     }
 
     type UserToken {

@@ -40,6 +40,7 @@ export const USERS = gql`
         id
         name
         email
+        isDeleted
         tasks {
           id
         }

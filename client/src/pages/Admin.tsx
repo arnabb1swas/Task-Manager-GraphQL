@@ -1,24 +1,27 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@apollo/client/react";
+import { useMutation, useQuery } from "@apollo/client/react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/auth/AuthContext";
 import { ModeToggle } from "@/components/ModeToggle";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { USERS } from "@/graphql/queries";
+import { RESTORE_USER } from "@/graphql/mutations";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import type { UsersData, UsersVars } from "@/types";
+import type { RestoreUserData, RestoreUserVars, UsersData, UsersVars } from "@/types";
 
 // Fixed row count keeps the skeleton table from flashing at a wildly
 // different height than the real one once rows arrive.
 const SKELETON_ROW_COUNT = 5;
 
-// Read-only admin directory: every user, their email, and their task count.
-// Role gating happens in the route guard (ProtectedRoute requireAdmin) — no
-// re-check needed here.
+// Admin directory: every user, their email, and their task count. Role gating
+// happens in the route guard (ProtectedRoute requireAdmin) — no re-check here.
+// Admins can also reveal soft-deleted users and undo the deletion.
 const Admin = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -27,10 +30,13 @@ const Admin = () => {
   const [searchInput, setSearchInput] = useState("");
   const searchText = useDebouncedValue(searchInput, 300);
 
+  // When on, the list also includes soft-deleted users so they can be restored.
+  const [showDeleted, setShowDeleted] = useState(false);
+
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const filter: UsersVars["filter"] = {
-    hasDeleted: false,
+    hasDeleted: showDeleted,
     sortBy: "ASC",
     limit: 20,
     ...(searchText ? { searchText } : {}),
@@ -39,6 +45,13 @@ const Admin = () => {
   const { data, loading, fetchMore } = useQuery<UsersData, UsersVars>(USERS, {
     variables: { filter },
   });
+
+  // restoreUser returns the User with isDeleted:false + __typename "User", so
+  // Apollo normalizes it onto the existing User:<id> entity and the row's badge
+  // flips in place — no refetch needed.
+  const [restoreUser, { loading: restoring }] = useMutation<RestoreUserData, RestoreUserVars>(
+    RESTORE_USER,
+  );
 
   const users = data?.users.userFeed ?? [];
   const pageInfo = data?.users.pageInfo;
@@ -61,6 +74,15 @@ const Admin = () => {
     }
   };
 
+  const handleRestore = async (id: number, name: string) => {
+    try {
+      await restoreUser({ variables: { input: { id } } });
+      toast.success(`Restored ${name}`);
+    } catch {
+      toast.error("Could not restore user");
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate("/login");
@@ -77,6 +99,12 @@ const Admin = () => {
           className="max-w-xs"
         />
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant={showDeleted ? "default" : "outline"}
+            onClick={() => setShowDeleted((prev) => !prev)}
+          >
+            {showDeleted ? "Hide deleted" : "Show deleted"}
+          </Button>
           <Button variant="outline" asChild>
             <Link to="/board">Back to board</Link>
           </Button>
@@ -94,6 +122,8 @@ const Admin = () => {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Tasks</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -107,6 +137,12 @@ const Admin = () => {
                 </TableCell>
                 <TableCell>
                   <Skeleton className="h-4 w-8" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-16" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="ml-auto h-4 w-20" />
                 </TableCell>
               </TableRow>
             ))}
@@ -127,6 +163,8 @@ const Admin = () => {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Tasks</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -135,6 +173,25 @@ const Admin = () => {
                 <TableCell>{user.name}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{user.tasks?.length ?? 0}</TableCell>
+                <TableCell>
+                  {user.isDeleted ? (
+                    <Badge variant="destructive">Deleted</Badge>
+                  ) : (
+                    <Badge variant="secondary">Active</Badge>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  {user.isDeleted ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={restoring}
+                      onClick={() => handleRestore(user.id, user.name)}
+                    >
+                      Undo delete
+                    </Button>
+                  ) : null}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

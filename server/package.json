@@ -1,12 +1,13 @@
 {
   "name": "task-manager-server",
   "version": "2.0.0",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "migrate": "knex migrate:latest --knexfile database/util/knexfile.js",
-    "seed": "knex seed:run --knexfile database/util/knexfile.js",
+    "migrate": "knex migrate:latest --knexfile database/util/knexfile.cjs",
+    "seed": "knex seed:run --knexfile database/util/knexfile.cjs",
     "test": "node --test \"__tests__/*.test.js\""
   },
   "dependencies": {

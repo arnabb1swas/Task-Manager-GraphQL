@@ -1,6 +1,6 @@
-const gql = require('graphql-tag');
+import gql from "graphql-tag";
 
-module.exports = gql`
+export default gql`
     extend type Query {
         tasks(filter: Filter!, cursor: String): TaskFeed!
         userTasks(filter: Filter!, cursor: String): TaskFeed!
@@ -21,7 +21,7 @@ module.exports = gql`
 
     type Task {
         id: Int!
-        title: String! 
+        title: String!
         taskStatus: TASK_STATUS_ENUM!
         user: User!
         subTasks: [Task!]

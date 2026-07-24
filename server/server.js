@@ -1,17 +1,23 @@
-require("dotenv").config();
+import "dotenv/config";
+import { createRequire } from "module";
 
-const cors = require("cors");
-const express = require("express");
-const { ApolloServer } = require("@apollo/server");
-const { expressMiddleware } = require("@as-integrations/express5");
-const { makeExecutableSchema } = require("@graphql-tools/schema");
+import cors from "cors";
+import express from "express";
+import { ApolloServer } from "@apollo/server";
+import { expressMiddleware } from "@as-integrations/express5";
+import { makeExecutableSchema } from "@graphql-tools/schema";
+
+import typeDefs from "./schema/queryType/index.js";
+import createLoaders from "./schema/dataloaders/index.js";
+import resolvers from "./schema/resolvers/index.js";
+import { verifyUserAuth } from "./service/auth.js";
+import { permissions } from "./service/permissions.js";
+
+// graphql-shield builds `permissions` with the CJS copy of graphql-middleware;
+// applyMiddleware must come from that same copy or its generator identity check
+// fails (the ESM build is a separate module instance). Force CJS via require.
+const require = createRequire(import.meta.url);
 const { applyMiddleware } = require("graphql-middleware");
-
-const typeDefs = require("./schema/queryType");
-const createLoaders = require("./schema/dataloaders");
-const resolvers = require("./schema/resolvers");
-const { verifyUserAuth } = require("./service/auth");
-const { permissions } = require("./service/permissions");
 
 // Fail fast: a missing secret must not silently produce unverifiable tokens.
 if (!process.env.JWT_SECRET_KEY) {

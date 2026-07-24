@@ -1,6 +1,7 @@
-const { test } = require("node:test");
-const assert = require("node:assert");
-const _ = require("lodash");
+import { test } from "node:test";
+import assert from "node:assert";
+import { readFileSync } from "node:fs";
+import _ from "lodash";
 
 // Mirrors the batchSubTasksId grouping contract.
 test("batchSubTasksId groups all sub-tasks per parent, [] when none", () => {
@@ -32,8 +33,8 @@ test("isTaskCreator id resolution handles both flat and input-wrapped args", () 
 
 // SignUpInput must not expose role.
 test("SignUpInput SDL does not accept role", () => {
-  const sdl = require("fs").readFileSync(
-    __dirname + "/../schema/queryType/user.js",
+  const sdl = readFileSync(
+    import.meta.dirname + "/../schema/queryType/user.js",
     "utf8",
   );
   const signUpBlock = sdl.slice(

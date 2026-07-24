@@ -1,7 +1,7 @@
-const gql = require('graphql-tag');
+import gql from "graphql-tag";
 
-const userTypeDefs = require('./user');
-const taskTypeDefs = require('./task');
+import userTypeDefs from "./user.js";
+import taskTypeDefs from "./task.js";
 
 const typeDefs = gql`
     type Query {
@@ -28,11 +28,6 @@ const typeDefs = gql`
         nextPageCursor: String
         hasNextPage: Boolean
     }
+`;
 
-`
-
-module.exports = [
-    typeDefs,
-    userTypeDefs,
-    taskTypeDefs
-];
+export default [typeDefs, userTypeDefs, taskTypeDefs];

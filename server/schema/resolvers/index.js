@@ -1,7 +1,4 @@
-const userResolver = require('./user');
-const taskResolver = require('./task');
+import userResolver from "./user.js";
+import taskResolver from "./task.js";
 
-module.exports = [
-    userResolver,
-    taskResolver
-];
+export default [userResolver, taskResolver];
