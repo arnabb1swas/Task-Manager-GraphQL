@@ -1,4 +1,5 @@
 import { createRequire } from "module";
+import { GraphQLError } from "graphql";
 import validator from "validator";
 
 import { getUserById } from "../database/models/user.js";
@@ -10,17 +11,25 @@ import { getTaskById } from "../database/models/task.js";
 const require = createRequire(import.meta.url);
 const { rule } = require("graphql-shield");
 
+// Auth failures (missing/invalid identity, or a token for a since-deleted
+// user) carry the UNAUTHENTICATED code so the client can reliably detect a
+// dead session and redirect to /login — a raw message string is not a stable
+// signal. Authorization failures (not-admin, not-owner) deliberately DON'T get
+// this: they must not log the user out.
+const _unauthenticated = (message) =>
+  new GraphQLError(message, { extensions: { code: "UNAUTHENTICATED" } });
+
 export const isAuthenticated = rule({ cache: "contextual" })(
   async (parent, args, context, info) => {
     const { jwtUser } = context;
 
     if (!jwtUser || !jwtUser.id) {
-      return new Error("ACCESS DENIED! LOGIN TO CONTINUE");
+      return _unauthenticated("ACCESS DENIED! LOGIN TO CONTINUE");
     }
 
     const user = await getUserById({ id: jwtUser.id });
     if (!user) {
-      return new Error("USER NOT FOUND");
+      return _unauthenticated("USER NOT FOUND");
     }
 
     return true;
@@ -33,7 +42,7 @@ export const isAdmin = rule({ cache: "contextual" })(
 
     // Guard against rule evaluation order — isAdmin can run without isAuthenticated having run first.
     if (!jwtUser) {
-      return new Error("ACCESS DENIED! LOGIN TO CONTINUE");
+      return _unauthenticated("ACCESS DENIED! LOGIN TO CONTINUE");
     }
 
     const { role } = jwtUser;
@@ -51,7 +60,7 @@ export const isTaskCreator = rule({ cache: "strict" })(
 
     // Guard against rule evaluation order — isTaskCreator can run without isAuthenticated having run first.
     if (!jwtUser) {
-      return new Error("ACCESS DENIED! LOGIN TO CONTINUE");
+      return _unauthenticated("ACCESS DENIED! LOGIN TO CONTINUE");
     }
 
     // Query.task uses a flat `id` arg (SDL: task(id: Int!)); task mutations nest it under `input`.

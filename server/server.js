@@ -3,6 +3,7 @@ import { createRequire } from "module";
 
 import cors from "cors";
 import express from "express";
+import { GraphQLError } from "graphql";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@as-integrations/express5";
 import { makeExecutableSchema } from "@graphql-tools/schema";
@@ -51,7 +52,21 @@ const startServer = async () => {
     express.json(),
     expressMiddleware(apolloServer, {
       context: async ({ req }) => {
-        const jwtUser = await verifyUserAuth(req);
+        let jwtUser;
+
+        // A present-but-invalid token (bad signature, malformed, expired)
+        // throws in verify. Surface it as UNAUTHENTICATED so the client drops
+        // the dead token and redirects, instead of a generic error it can't
+        // classify. A missing token is fine here — jwtUser stays undefined and
+        // the shield rules reject protected fields.
+        try {
+          jwtUser = await verifyUserAuth(req);
+        } catch {
+          throw new GraphQLError("Invalid or expired token", {
+            extensions: { code: "UNAUTHENTICATED" },
+          });
+        }
+
         return { jwtUser, loaders: createLoaders() };
       },
     }),
